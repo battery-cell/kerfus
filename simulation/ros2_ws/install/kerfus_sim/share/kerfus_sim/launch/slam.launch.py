@@ -1,0 +1,1 @@
+/home/lemon/freecadprojects/kerfus/simulation/ros2_ws/src/kerfus_sim/launch/slam.launch.py

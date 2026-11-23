@@ -1,0 +1,256 @@
+<?xml version="1.0"?>
+<!--
+  Kerfus: two-wheel differential-drive robot with a 2D lidar (RPLIDAR A1M8 class).
+  Target: ROS 2 Humble + Gazebo Fortress ("ign gazebo").
+
+  Frame convention (my assumption, change it if your robot's front is elsewhere):
+    base_link origin = centre of the body, on its underside (z = 0 is the bottom of the shell)
+    +X = forward, +Y = left, +Z = up
+  All numbers are metres / kilograms. Values marked PLACEHOLDER are guesses, not measurements:
+  see docs/measured_dimensions.md for what was measured from your STEP files.
+-->
+<robot name="kerfus">
+
+  <material name="body_grey"><color rgba="0.80 0.80 0.90 1.0"/></material>
+  <material name="dark"><color rgba="0.10 0.10 0.10 1.0"/></material>
+  <material name="steel"><color rgba="0.60 0.60 0.65 1.0"/></material>
+
+  <!-- ===================================================================== -->
+  <!-- BODY: 280 x 280 x 80 mm shell (measured from main_corpus.step)         -->
+  <!-- Mass 3.0 kg is a PLACEHOLDER: weigh the finished robot and edit it.    -->
+  <!-- Inertia = solid box, m/12*(b^2+c^2).                                   -->
+  <!-- ===================================================================== -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <mass value="3.0"/>
+      <inertia ixx="0.0212" ixy="0" ixz="0" iyy="0.0212" iyz="0" izz="0.0392"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry><box size="0.28 0.28 0.08"/></geometry>
+      <material name="body_grey"/>
+      <!-- To use your real model instead of the box, see meshes/README.md:
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="package://kerfus_sim/meshes/base_link.stl" scale="0.001 0.001 0.001"/></geometry>
+      -->
+    </visual>
+    <collision>
+      <!-- 2 mm narrower than the visual so the wheels' inner faces do not overlap it -->
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry><box size="0.28 0.276 0.08"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ===================================================================== -->
+  <!-- WHEELS: radius 22 mm, width 20 mm (measured from Wheel.step)           -->
+  <!-- Axle height 19.9 mm above the body underside, wheel centres at         -->
+  <!-- y = +/-149.6 mm (track 299.2 mm), derived from your Onshape export.    -->
+  <!-- Wheel bottoms therefore sit 2.1 mm BELOW the body underside.           -->
+  <!-- Wheel mass 0.08 kg is a PLACEHOLDER. Inertia = solid cylinder.         -->
+  <!-- ===================================================================== -->
+  <link name="wheel_left">
+    <inertial>
+      <mass value="0.08"/>
+      <inertia ixx="1.2347e-05" ixy="0" ixz="0" iyy="1.9360e-05" iyz="0" izz="1.2347e-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.020"/></geometry>
+      <material name="dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.020"/></geometry>
+    </collision>
+  </link>
+
+  <link name="wheel_right">
+    <inertial>
+      <mass value="0.08"/>
+      <inertia ixx="1.2347e-05" ixy="0" ixz="0" iyy="1.9360e-05" iyz="0" izz="1.2347e-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.020"/></geometry>
+      <material name="dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.020"/></geometry>
+    </collision>
+  </link>
+
+  <!-- Both wheel joints turn about +Y: positive rotation drives the robot forward (+X). -->
+  <joint name="wheel_left_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="wheel_left"/>
+    <origin xyz="0 0.1496 0.0199" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.01" friction="0.0"/>
+  </joint>
+
+  <joint name="wheel_right_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="wheel_right"/>
+    <origin xyz="0 -0.1496 0.0199" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <dynamics damping="0.01" friction="0.0"/>
+  </joint>
+
+  <!-- ===================================================================== -->
+  <!-- CASTERS: simulation only. Your CAD shows only two wheels, which would  -->
+  <!-- tip over, so two frictionless balls (front and rear) keep it upright.  -->
+  <!-- Move or remove them to match your real support wheels.                 -->
+  <!-- Ball bottoms are level with the wheel bottoms (z = -2.1 mm).           -->
+  <!-- ===================================================================== -->
+  <link name="caster_front">
+    <inertial>
+      <mass value="0.02"/>
+      <inertia ixx="8.0e-07" ixy="0" ixz="0" iyy="8.0e-07" iyz="0" izz="8.0e-07"/>
+    </inertial>
+    <visual>
+      <geometry><sphere radius="0.010"/></geometry>
+      <material name="steel"/>
+    </visual>
+    <collision>
+      <geometry><sphere radius="0.010"/></geometry>
+    </collision>
+  </link>
+  <joint name="caster_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_front"/>
+    <origin xyz="0.115 0 0.0079" rpy="0 0 0"/>
+  </joint>
+
+  <link name="caster_rear">
+    <inertial>
+      <mass value="0.02"/>
+      <inertia ixx="8.0e-07" ixy="0" ixz="0" iyy="8.0e-07" iyz="0" izz="8.0e-07"/>
+    </inertial>
+    <visual>
+      <geometry><sphere radius="0.010"/></geometry>
+      <material name="steel"/>
+    </visual>
+    <collision>
+      <geometry><sphere radius="0.010"/></geometry>
+    </collision>
+  </link>
+  <joint name="caster_rear_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_rear"/>
+    <origin xyz="-0.115 0 0.0079" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===================================================================== -->
+  <!-- LIDAR: head sits on the connector plate, rotation axis at body centre. -->
+  <!-- The head spans z = 115.3 .. 138.8 mm in your CAD, so the frame is put  -->
+  <!-- mid-head at z = 0.127 m. That is an APPROXIMATION of the laser plane:  -->
+  <!-- check the RPLIDAR A1 datasheet and edit the joint below if it differs.  -->
+  <!-- Mass 0.17 kg is a PLACEHOLDER.                                         -->
+  <!-- ===================================================================== -->
+  <link name="lidar_link">
+    <inertial>
+      <mass value="0.17"/>
+      <inertia ixx="9.7159e-05" ixy="0" ixz="0" iyy="9.7159e-05" iyz="0" izz="1.1016e-04"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.036" length="0.0235"/></geometry>
+      <material name="dark"/>
+    </visual>
+    <visual>
+      <!-- base/bracket under the head, z = 85 .. 116 mm in your CAD -->
+      <origin xyz="0 0 -0.0265" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.040" length="0.031"/></geometry>
+      <material name="dark"/>
+    </visual>
+    <!-- No collision shape on purpose: nothing in the simulation touches the lidar,
+         and the simulated lidar ignores geometry closer than its 0.15 m minimum range. -->
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.127" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===================================================================== -->
+  <!-- GAZEBO (Fortress) EXTENSIONS                                           -->
+  <!-- ===================================================================== -->
+
+  <!-- Wheels grip, casters slide. -->
+  <gazebo reference="wheel_left">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="wheel_right">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="caster_front">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+  <gazebo reference="caster_rear">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <!-- 2D lidar, modelled on the RPLIDAR A1M8: 360 deg, 0.15 .. 12 m.
+       The real unit spins at about 5.5 Hz by default; 10 Hz is used here because it
+       suits SLAM in simulation. Set update_rate to 5.5 to match the hardware. -->
+  <gazebo reference="lidar_link">
+    <sensor name="rplidar_a1" type="gpu_lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>scan</topic>
+      <ignition_frame_id>lidar_link</ignition_frame_id>
+
+      <update_rate>10</update_rate>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.15</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- Differential drive: listens on /cmd_vel, publishes /odom and the odom -> base_link transform. -->
+  <gazebo>
+    <plugin filename="ignition-gazebo-diff-drive-system"
+            name="ignition::gazebo::systems::DiffDrive">
+      <left_joint>wheel_left_joint</left_joint>
+      <right_joint>wheel_right_joint</right_joint>
+      <wheel_separation>0.2992</wheel_separation>
+      <wheel_radius>0.022</wheel_radius>
+      <odom_publish_frequency>30</odom_publish_frequency>
+      <topic>cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <tf_topic>/tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+    </plugin>
+
+    <!-- Wheel joint angles, so robot_state_publisher can draw the wheels turning. -->
+    <plugin filename="ignition-gazebo-joint-state-publisher-system"
+            name="ignition::gazebo::systems::JointStatePublisher"/>
+  </gazebo>
+
+</robot>

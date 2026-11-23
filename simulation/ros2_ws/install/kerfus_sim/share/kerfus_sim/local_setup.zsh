@@ -1,0 +1,1 @@
+/home/lemon/freecadprojects/kerfus/simulation/ros2_ws/build/kerfus_sim/ament_cmake_environment_hooks/local_setup.zsh
