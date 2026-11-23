@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# One-command Kerfus simulation: build, Gazebo, robot, SLAM, RViz and teleop.
+# One-command Kerfus simulation demos.
 #
 # Usage:
-#   ./run_sim.sh                        build, then start the full demo
+#   ./run_sim.sh                        build, then SLAM + RViz + teleop
+#   ./run_sim.sh --nav                  build, then Nav2 + RViz + rqt_graph
 #   ./run_sim.sh --no-build             skip colcon build
 #   ./run_sim.sh world:=/path/room.sdf  use a different Gazebo world
-#   ./run_sim.sh teleop:=false          do not open the teleop terminal
+#   ./run_sim.sh map:=/path/map.yaml    use another map with --nav
+#   ./run_sim.sh teleop:=true           also open teleop in --nav mode
 #   ./run_sim.sh --help                 show this help
 #
-# The teleop keys are printed in the terminal window that opens. Drive the
-# robot around the room and watch the map grow in RViz. Ctrl-C in this
-# terminal stops the whole simulation.
+# In the default demo, use the teleop terminal to drive and watch the SLAM map
+# grow in RViz. In --nav mode, use the Nav2 Goal tool in RViz to navigate on
+# maps/room.yaml and inspect the ROS graph in rqt_graph. Ctrl-C stops everything.
 set -eo pipefail
 
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,21 +21,35 @@ DISTRO="${ROS_DISTRO:-humble}"
 ROS_SETUP="${ROS_SETUP:-/opt/ros/$DISTRO/setup.bash}"
 
 usage() {
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 BUILD=1
+LAUNCH_FILE=bringup.launch.py
+NO_TELEOP=0
+NO_RVIZ=0
+NO_SLAM=0
 LAUNCH_ARGS=()
 for arg in "$@"; do
     case "$arg" in
+        --nav)        LAUNCH_FILE=nav_demo.launch.py ;;
         --no-build)   BUILD=0 ;;
-        --no-teleop)  LAUNCH_ARGS+=('teleop:=false') ;;
-        --no-rviz)    LAUNCH_ARGS+=('rviz:=false') ;;
-        --no-slam)    LAUNCH_ARGS+=('slam:=false') ;;
+        --no-teleop)  NO_TELEOP=1 ;;
+        --no-rviz)    NO_RVIZ=1 ;;
+        --no-slam)    NO_SLAM=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            LAUNCH_ARGS+=("$arg") ;;
     esac
 done
+if ((NO_TELEOP)); then
+    LAUNCH_ARGS+=('teleop:=false')
+fi
+if ((NO_RVIZ)); then
+    LAUNCH_ARGS+=('rviz:=false')
+fi
+if ((NO_SLAM)) && [[ "$LAUNCH_FILE" == bringup.launch.py ]]; then
+    LAUNCH_ARGS+=('slam:=false')
+fi
 
 if [[ ! -f "$ROS_SETUP" ]]; then
     echo "error: $ROS_SETUP not found. Is ROS 2 $DISTRO installed?" >&2
@@ -49,7 +65,14 @@ fi
 source "$ROS_SETUP"
 
 missing=()
-for pkg in ros_gz_sim ros_gz_bridge slam_toolbox teleop_twist_keyboard rviz2; do
+required=(ros_gz_sim ros_gz_bridge teleop_twist_keyboard rviz2)
+if [[ "$LAUNCH_FILE" == bringup.launch.py ]]; then
+    required+=(slam_toolbox)
+fi
+if [[ "$LAUNCH_FILE" == nav_demo.launch.py ]]; then
+    required+=(nav2_bringup rqt_graph)
+fi
+for pkg in "${required[@]}"; do
     if [[ ! -d "/opt/ros/$DISTRO/share/$pkg" ]]; then
         missing+=("ros-$DISTRO-${pkg//_/-}")
     fi
@@ -95,7 +118,12 @@ fi
 # shellcheck disable=SC1091
 source "$WS/install/setup.bash"
 
-echo "[run_sim] Starting Gazebo + robot + SLAM + RViz."
-echo "[run_sim] Teleop keys open in a new terminal; drive around and watch /map fill in."
+if [[ "$LAUNCH_FILE" == nav_demo.launch.py ]]; then
+    echo "[run_sim] Starting Gazebo + robot + Nav2 + RViz + rqt_graph."
+    echo "[run_sim] Use the Nav2 Goal tool in RViz to send the robot somewhere."
+else
+    echo "[run_sim] Starting Gazebo + robot + SLAM + RViz."
+    echo "[run_sim] Teleop keys open in a new terminal; drive around and watch /map fill in."
+fi
 
-exec ros2 launch kerfus_sim bringup.launch.py "${LAUNCH_ARGS[@]}"
+exec ros2 launch kerfus_sim "$LAUNCH_FILE" "${LAUNCH_ARGS[@]}"

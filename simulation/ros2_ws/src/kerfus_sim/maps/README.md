@@ -1,9 +1,18 @@
 # maps/
 
-Saved maps of rooms. **This folder is empty on purpose**: you make the map by driving the robot.
-Nav2 needs a map before `navigation.launch.py` will work.
+Maps for Nav2.
 
-## Get a map
+`room.pgm` and `room.yaml` are a **reference map generated from `worlds/room.sdf`** for the Nav2
+teaching demo (`./run_sim.sh --nav`). It represents the 6 x 5 m room, its walls and the three
+obstacles at 0.05 m per pixel. Regenerate it after editing the world:
+
+```bash
+python3 simulation/ros2_ws/src/kerfus_sim/maps/generate_room_map.py
+```
+
+For a real mapping exercise, build a map with SLAM as described below.
+
+## Build a map with SLAM
 
 1. Start the simulation, SLAM and teleop in one command (from the repository's `simulation/`
    folder):
@@ -34,15 +43,16 @@ and fills in as the robot drives.
 ros2 run nav2_map_server map_saver_cli -f ros2_ws/src/kerfus_sim/maps/room
 ```
 
-## Files you should end up with
+## Files
 
 | File | What it is |
 |---|---|
 | `room.yaml` | Map settings: image name, resolution (0.05 m per pixel), origin |
 | `room.pgm` | The map image: white free space, black walls, grey unknown |
+| `generate_room_map.py` | Regenerates the reference map from `worlds/room.sdf` |
 
-`navigation.launch.py` loads `maps/room.yaml` by default. Use another name with
-`map:=/full/path/other.yaml`.
+`navigation.launch.py` and `nav_demo.launch.py` load `maps/room.yaml` by default. Use another map
+with `map:=/full/path/other.yaml`.
 
 ## Notes
 

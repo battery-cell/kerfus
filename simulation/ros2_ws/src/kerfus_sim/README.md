@@ -4,10 +4,9 @@ ROS 2 **Humble** + Gazebo **Fortress** (`ign gazebo`) package for the Kerfus rob
 differential-drive base with a 2D lidar (RPLIDAR A1M8 class) that maps rooms and navigates with
 slam_toolbox and Nav2.
 
-> **Status: written but not run.** The files were checked for syntax and for internal consistency
-> (valid XML and YAML, a proper link tree, sane inertia values), but nothing here has been started in
-> ROS or Gazebo yet. Expect to fix a few small things on the first launch. `docs/troubleshooting.md`
-> lists the likely ones.
+> **Status:** the Gazebo + SLAM + teleop demo has been run. The Nav2 teaching demo is prepared
+> against a reference map and needs the full Nav2 stack installed (`ros-humble-navigation2`,
+> `ros-humble-nav2-bringup`). `docs/troubleshooting.md` lists the likely first-launch problems.
 
 ## Folder map
 
@@ -19,8 +18,8 @@ slam_toolbox and Nav2.
 | `worlds/` | `room.sdf`, a 6 x 5 m test room | Your real room's dimensions (optional) |
 | `config/` | slam_toolbox and Nav2 settings | Nothing now; tune after the first runs |
 | `launch/` | Start-up scripts | Nothing |
-| `rviz/` | `slam.rviz`, the SLAM view | Nothing |
-| `maps/` | Where saved maps go | Make a map by driving the robot (see `maps/README.md`) |
+| `rviz/` | `slam.rviz` and `nav.rviz` views | Nothing |
+| `maps/` | Reference map plus maps saved from SLAM | `maps/room.yaml` is generated from the world; replace it with a real mapping run for the real robot |
 | `docs/` | Measurements, assumptions, troubleshooting | Nothing |
 
 Every folder has its own `README.md` saying what belongs in it.
@@ -29,7 +28,8 @@ Every folder has its own `README.md` saying what belongs in it.
 
 ```bash
 sudo apt install ros-humble-ros-gz ros-humble-slam-toolbox ros-humble-navigation2 \
-                 ros-humble-nav2-bringup ros-humble-teleop-twist-keyboard ros-humble-rviz2
+                 ros-humble-nav2-bringup ros-humble-teleop-twist-keyboard ros-humble-rviz2 \
+                 ros-humble-rqt-graph
 ```
 
 The repository already contains a ROS 2 workspace at `simulation/ros2_ws`, so the quickest way is
@@ -71,6 +71,7 @@ walls and obstacles. Ctrl-C in the script terminal stops everything.
 Useful variants:
 
 ```bash
+./run_sim.sh --nav                         # Nav2 + RViz + rqt_graph demo
 ./run_sim.sh --no-build                    # skip the build after the first run
 ./run_sim.sh world:=/path/to/other.sdf     # use a different Gazebo world
 ./run_sim.sh teleop:=false                 # do not open the teleop window
@@ -118,17 +119,48 @@ drive around the whole room, then save:
 ros2 run nav2_map_server map_saver_cli -f ros2_ws/src/kerfus_sim/maps/room
 ```
 
-**Navigate on it** (stop the SLAM launch first)
-
-From the repository root, point Nav2 at the map you saved:
+**Navigation + rqt_graph demo** (for teaching how ROS works)
 
 ```bash
-ros2 launch kerfus_sim navigation.launch.py \
-  map:=$(pwd)/simulation/ros2_ws/src/kerfus_sim/maps/room.yaml
+./run_sim.sh --nav
 ```
 
-In RViz, add a **Map** display (`/map`), click **2D Pose Estimate** if the robot isn't where AMCL thinks,
-then **Nav2 Goal** to send it somewhere.
+This starts the same Gazebo room and robot, but instead of SLAM it runs the full Nav2 stack on the
+reference map `maps/room.yaml`, opens `rviz/nav.rviz` (map, global/local costmaps, planned path,
+scan, robot) and starts `rqt_graph`. Use the **Nav2 Goal** tool in RViz to send the robot somewhere.
+In rqt_graph follow the chain:
+
+```
+Gazebo -> ros_gz_bridge -> /scan, /odom, /tf -> AMCL + Nav2 -> /cmd_vel -> ros_gz_bridge -> Gazebo
+```
+
+You can also open the graph next to any other demo:
+
+```bash
+ros2 launch kerfus_sim rqt_graph.launch.py
+```
+
+The reference map is generated from the world by `maps/generate_room_map.py` (see `maps/README.md`).
+To navigate on a map you built with SLAM, pass it explicitly:
+
+```bash
+./run_sim.sh --nav map:=/full/path/to/room.yaml
+```
+
+**Navigate on it** (stop the SLAM launch first)
+
+`nav_demo.launch.py` runs the simulation and Nav2 together. If you prefer separate terminals:
+
+```bash
+ros2 launch kerfus_sim sim.launch.py
+ros2 launch kerfus_sim navigation.launch.py \
+  map:=$(pwd)/simulation/ros2_ws/src/kerfus_sim/maps/room.yaml
+ros2 run rviz2 rviz2 -d $(ros2 pkg prefix kerfus_sim)/share/kerfus_sim/rviz/nav.rviz
+ros2 run rqt_graph rqt_graph
+```
+
+In RViz, click **2D Pose Estimate** if the robot isn't where AMCL thinks, then **Nav2 Goal** to
+send it somewhere.
 
 ## Quick checks
 

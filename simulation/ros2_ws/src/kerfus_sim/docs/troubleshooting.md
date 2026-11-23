@@ -1,13 +1,17 @@
 # Troubleshooting
 
-The simulation has not been run end to end, so these are the likeliest first-launch problems. Run
-`source ~/ros2_ws/install/setup.bash` in every terminal first.
+The Gazebo + SLAM + teleop demo has been run. The Nav2 demo additionally needs the full Nav2
+stack installed. Run `source ~/ros2_ws/install/setup.bash` in every terminal first (or use the
+workspace inside `simulation/ros2_ws`).
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
 | `run_sim.sh` prints `missing packages` | ROS 2 Humble / Gazebo / slam_toolbox / RViz not installed | Run the `sudo apt install ...` line it prints, then start it again |
-| Teleop window does not open | No terminal emulator (SSH, minimal desktop) | Run `ros2 run teleop_twist_keyboard teleop_twist_keyboard` in another terminal |
-| `ign: command not found` | Gazebo Fortress is not installed | `sudo apt install ros-humble-ros-gz` |
+| `run_sim.sh --nav` prints `missing packages: ros-humble-nav2-bringup` | The full Nav2 stack is not installed | `sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup` |
+| `ros2 launch ... nav_demo` says `nav2_bringup` not found | Only `nav2_map_server` / parts of Nav2 are installed | Install `ros-humble-navigation2` and `ros-humble-nav2-bringup` |
+| No map in RViz in `--nav` mode | RViz map display durability is Volatile, or map_server failed | `ros2 topic info /map -v`; the map is latched (Transient Local), reload `nav.rviz` |
+| Nav2 Goal does nothing | No `map -> odom` transform, or Nav2 is still starting | Wait 10 s after launch, check `/cmd_vel` and `ros2 run tf2_tools view_frames` |
+| rqt_graph window is empty | Nodes have not started, or the graph filter hides them | Wait for Nav2, press the refresh button, or untick "Hide dead sinks" |
 | `libEGL warning: egl: failed to create dri2 screen` | Harmless graphics warning | Ignore it if the window opens |
 | Segmentation fault when closing Gazebo | Known Fortress GUI exit bug | Ignore it |
 | Gazebo window is black or the lidar sensor errors | The `ogre2` renderer does not suit your graphics driver | In `worlds/room.sdf` change `ogre2` to `ogre`; or try `LIBGL_ALWAYS_SOFTWARE=1 ros2 launch kerfus_sim sim.launch.py` |
