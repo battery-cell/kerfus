@@ -1,1 +1,0 @@
-/home/lemon/freecadprojects/kerfus/simulation/ros2_ws/src/rplidar_ros/launch/rplidar_s3_launch.py
