@@ -47,10 +47,15 @@ TERMINALS = (
 
 
 def _terminal_prefix():
-    """Return the prefix tokens for a terminal emulator, or None."""
+    """Return a terminal-emulator launch prefix string, or None.
+
+    The prefix is passed through shlex.split() by launch, so the executable and
+    its option must be separated by a space here (a list would be joined into
+    one token, e.g. "gnome-terminal--").
+    """
     for executable, option in TERMINALS:
         if shutil.which(executable):
-            return [executable, *option]
+            return ' '.join([executable, *option])
     return None
 
 
