@@ -19,54 +19,112 @@ slam_toolbox and Nav2.
 | `worlds/` | `room.sdf`, a 6 x 5 m test room | Your real room's dimensions (optional) |
 | `config/` | slam_toolbox and Nav2 settings | Nothing now; tune after the first runs |
 | `launch/` | Start-up scripts | Nothing |
+| `rviz/` | `slam.rviz`, the SLAM view | Nothing |
 | `maps/` | Where saved maps go | Make a map by driving the robot (see `maps/README.md`) |
 | `docs/` | Measurements, assumptions, troubleshooting | Nothing |
 
 Every folder has its own `README.md` saying what belongs in it.
 
-## Install and build
+## Install
 
 ```bash
 sudo apt install ros-humble-ros-gz ros-humble-slam-toolbox ros-humble-navigation2 \
                  ros-humble-nav2-bringup ros-humble-teleop-twist-keyboard ros-humble-rviz2
+```
 
+The repository already contains a ROS 2 workspace at `simulation/ros2_ws`, so the quickest way is
+to build and run it in place from the repository's `simulation/` folder:
+
+```bash
+cd simulation
+./run_sim.sh
+```
+
+`run_sim.sh` sources ROS 2 Humble, builds `kerfus_sim` with `colcon build --symlink-install` and
+starts the demo. `--symlink-install` matters: edits to the URDF, configs and saved maps then take
+effect without rebuilding. The package name is `kerfus_sim`, whatever the folder is called.
+
+To use the package in a different workspace instead:
+
+```bash
 mkdir -p ~/ros2_ws/src
-cp -r simulation ~/ros2_ws/src/            # this folder, as it is
+cp -r simulation/ros2_ws/src/kerfus_sim ~/ros2_ws/src/
 cd ~/ros2_ws
 source /opt/ros/humble/setup.bash
 colcon build --packages-select kerfus_sim --symlink-install
 source install/setup.bash
 ```
 
-`--symlink-install` matters: edits to the URDF, configs and saved maps then take effect without
-rebuilding. The package name is `kerfus_sim`, whatever the folder is called.
-
 ## Run it
 
-Use a new terminal for each step, and run `source ~/ros2_ws/install/setup.bash` in every one.
+From the repository's `simulation/` folder:
+
+```bash
+./run_sim.sh
+```
+
+This is the whole demo in one command: Gazebo with the test room, the robot and the bridge,
+slam_toolbox, RViz with the SLAM view, and teleop in a new terminal window. Drive the robot around
+with the keys printed in the teleop window; the occupancy grid in RViz grows as the lidar sees the
+walls and obstacles. Ctrl-C in the script terminal stops everything.
+
+Useful variants:
+
+```bash
+./run_sim.sh --no-build                    # skip the build after the first run
+./run_sim.sh world:=/path/to/other.sdf     # use a different Gazebo world
+./run_sim.sh teleop:=false                 # do not open the teleop window
+./run_sim.sh rviz:=false slam:=false       # Gazebo only
+```
+
+If no terminal emulator is available (for example over SSH), run teleop in another terminal:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+### Manual start
+
+Use a new terminal for each step. From the repository root, run
+`source simulation/ros2_ws/install/setup.bash` in every one (or source the workspace you built in).
 
 ```bash
 # 1. Gazebo + robot + bridge
 ros2 launch kerfus_sim sim.launch.py
 
-# 2. Drive it (keys shown in the terminal)
+# 2. SLAM (builds the map while you drive)
+ros2 launch kerfus_sim slam.launch.py
+
+# 3. Drive it (keys shown in the terminal)
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
-# 3. Look at it
-ros2 run rviz2 rviz2        # Fixed Frame = odom (or map); add RobotModel, LaserScan /scan, TF
+# 4. Look at it
+ros2 run rviz2 rviz2 -d $(ros2 pkg prefix kerfus_sim)/share/kerfus_sim/rviz/slam.rviz
+```
+
+You can also start all of it through the launch file without the wrapper script:
+
+```bash
+ros2 launch kerfus_sim bringup.launch.py
 ```
 
 **Make a map**
 
+`slam.launch.py` is already running when you use `bringup.launch.py` or `run_sim.sh`, so just
+drive around the whole room, then save:
+
 ```bash
-ros2 launch kerfus_sim slam.launch.py                  # then drive around the whole room
-ros2 run nav2_map_server map_saver_cli -f ~/ros2_ws/src/simulation/maps/room
+# from the repository's simulation/ folder
+ros2 run nav2_map_server map_saver_cli -f ros2_ws/src/kerfus_sim/maps/room
 ```
 
 **Navigate on it** (stop the SLAM launch first)
 
+From the repository root, point Nav2 at the map you saved:
+
 ```bash
-ros2 launch kerfus_sim navigation.launch.py
+ros2 launch kerfus_sim navigation.launch.py \
+  map:=$(pwd)/simulation/ros2_ws/src/kerfus_sim/maps/room.yaml
 ```
 
 In RViz, add a **Map** display (`/map`), click **2D Pose Estimate** if the robot isn't where AMCL thinks,

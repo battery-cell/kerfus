@@ -5,14 +5,24 @@ Nav2 needs a map before `navigation.launch.py` will work.
 
 ## Get a map
 
-1. Start the simulation and SLAM:
+1. Start the simulation, SLAM and teleop in one command (from the repository's `simulation/`
+   folder):
+
+```bash
+./run_sim.sh
+```
+
+Or start the pieces by hand:
 
 ```bash
 ros2 launch kerfus_sim sim.launch.py
 ros2 launch kerfus_sim slam.launch.py
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
-ros2 run rviz2 rviz2            # Fixed Frame = map, add a Map display on /map
+ros2 run rviz2 rviz2 -d $(ros2 pkg prefix kerfus_sim)/share/kerfus_sim/rviz/slam.rviz
 ```
+
+RViz opens with **Fixed Frame = map** and a **Map** display on `/map`. The map starts empty (grey)
+and fills in as the robot drives.
 
 2. Drive slowly around the room, along every wall, and past each obstacle, until the map in RViz is
    complete. Drive a loop back to the start so slam_toolbox can correct drift.
@@ -20,7 +30,8 @@ ros2 run rviz2 rviz2            # Fixed Frame = map, add a Map display on /map
 3. Save it:
 
 ```bash
-ros2 run nav2_map_server map_saver_cli -f ~/ros2_ws/src/simulation/maps/room
+# from the repository's simulation/ folder
+ros2 run nav2_map_server map_saver_cli -f ros2_ws/src/kerfus_sim/maps/room
 ```
 
 ## Files you should end up with

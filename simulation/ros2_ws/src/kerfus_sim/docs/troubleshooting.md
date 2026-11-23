@@ -5,6 +5,8 @@ The simulation has not been run end to end, so these are the likeliest first-lau
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
+| `run_sim.sh` prints `missing packages` | ROS 2 Humble / Gazebo / slam_toolbox / RViz not installed | Run the `sudo apt install ...` line it prints, then start it again |
+| Teleop window does not open | No terminal emulator (SSH, minimal desktop) | Run `ros2 run teleop_twist_keyboard teleop_twist_keyboard` in another terminal |
 | `ign: command not found` | Gazebo Fortress is not installed | `sudo apt install ros-humble-ros-gz` |
 | `libEGL warning: egl: failed to create dri2 screen` | Harmless graphics warning | Ignore it if the window opens |
 | Segmentation fault when closing Gazebo | Known Fortress GUI exit bug | Ignore it |
