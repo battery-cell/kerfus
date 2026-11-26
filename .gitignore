@@ -3,3 +3,12 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# ROS 2 workspace build artifacts (rebuild with colcon)
+/simulation/ros2_ws/build/
+/simulation/ros2_ws/install/
+/simulation/ros2_ws/log/
+
+# Python bytecode
+__pycache__/
+*.pyc
